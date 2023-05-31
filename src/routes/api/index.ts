@@ -48,7 +48,10 @@ const timeout = isNaN(+process.env.TIMEOUT!)
   ? defaultEnv.TIMEOUT
   : +process.env.TIMEOUT!
 
+const usernameSet = process.env.USERNAME || "chatgpt"
 const passwordSet = process.env.PASSWORD || defaultEnv.PASSWORD
+
+const basicAuth = process.env.BASIC_AUTH || "false"
 
 export async function POST({ request }: APIEvent) {
   try {
@@ -61,7 +64,23 @@ export async function POST({ request }: APIEvent) {
     } = await request.json()
     const { messages, key = localKey, temperature, password, model } = body
 
-    if (passwordSet && password !== passwordSet) {
+    if (basicAuth === "true" && !request.headers.get("authorization")) {
+      throw new Error("请使用正确的URL访问本网站。")
+    }
+
+    if (basicAuth === "true") {
+      const auth = request.headers.get("authorization")!
+      const encoded = auth.split(" ")[1]
+      const decoded = atob(encoded)
+      const [username, userPassword] = decoded.split(":")
+      if (username !== usernameSet || userPassword !== passwordSet) {
+        throw new Error(
+          "密码错误，请联系网站管理员, 请使用正确的URL访问本网站。"
+        )
+      }
+    }
+
+    if (basicAuth === "false" && passwordSet && password !== passwordSet) {
       throw new Error("密码错误，请联系网站管理员。")
     }
 
